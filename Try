@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PHQ-9 Adaptive Clinical Story Engine</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Devanagari:wght@300;400;600&display=swap" rel="stylesheet"/>
+
+<style>
+body{
+  font-family:'Noto Serif Devanagari',serif;
+  margin:0;
+  background:#f6f3ee;
+  color:#1a1a1a;
+}
+header{
+  background:#0d1b3e;
+  color:#fff;
+  padding:18px;
+  text-align:center;
+}
+.container{
+  max-width:800px;
+  margin:auto;
+  padding:20px;
+}
+.card{
+  background:#fff;
+  padding:20px;
+  border-radius:12px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.08);
+  margin-bottom:16px;
+}
+.story{
+  background:#162654;
+  color:#fff;
+  padding:16px;
+  border-radius:10px;
+  min-height:90px;
+  line-height:1.7;
+  margin-bottom:10px;
+}
+button{
+  padding:10px 14px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+.btn{
+  background:#0d1b3e;
+  color:#fff;
+}
+.btn-light{
+  background:#e2cfa0;
+}
+.option{
+  display:block;
+  padding:10px;
+  margin:6px 0;
+  border:1px solid #ccc;
+  border-radius:8px;
+  cursor:pointer;
+}
+.option:hover{
+  background:#f0eae0;
+}
+.nav{
+  display:flex;
+  justify-content:space-between;
+  margin-top:10px;
+}
+.score{
+  font-size:22px;
+  font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h2>PHQ-9 – Nepali Adaptive Clinical Story Engine</h2>
+</header>
+
+<div class="container">
+
+  <div class="card" id="intro">
+    <h3>सेवाग्राही विवरण</h3>
+    <input id="name" placeholder="नाम" style="width:100%;padding:10px;margin-bottom:10px;">
+    <input id="date" type="date" style="width:100%;padding:10px;">
+    <button class="btn" style="margin-top:10px;width:100%" onclick="start()">सुरु गर्नुहोस्</button>
+  </div>
+
+  <div class="card" id="app" style="display:none">
+
+    <h3 id="qTitle"></h3>
+
+    <div class="story" id="storyBox"></div>
+
+    <button class="btn-light" onclick="nextStory()">अर्को कथा</button>
+
+    <p id="qText"></p>
+
+    <div id="options"></div>
+
+    <div class="nav">
+      <button class="btn" onclick="prevQ()">Back</button>
+      <button class="btn" onclick="nextQ()">Next</button>
+    </div>
+
+  </div>
+
+  <div class="card" id="result" style="display:none">
+    <h2>नतिजा</h2>
+    <div class="score" id="score"></div>
+    <p id="severity"></p>
+  </div>
+
+</div>
+
+<script>
+
+const QUESTIONS = [
+{
+q:"रुचि वा आनन्द नलाग्नु",
+stories:[
+"राम दाइ बिहान बगैँचामा जान्थे, अहिले झ्यालबाट मात्र हेर्छन्।",
+"सीता दिदीलाई पहिले गीत गाउन मन पर्थ्यो, अहिले आवाज आउँदैन।",
+"हरि भाइलाई फिल्म हेर्न मन लाग्दैन।",
+"कविता दिदीलाई घर सजाउन मन लाग्दैन।",
+"बुढा बुवालाई रेडियो सुन्न पनि इच्छा छैन।"
+]
+},
+{
+q:"उदास महसुस हुनु",
+stories:[
+"राजु दाइ बिहानै भारी मन लिएर उठ्छन्।",
+"माया आमा राति एक्लै रोउँछिन्।",
+"साजन भाइलाई भविष्य अँध्यारो लाग्छ।",
+"सुनिता दिदीलाई आशा कम भएको छ।",
+"रमेश दाइलाई दिनहरू खाली लाग्छ।"
+]
+},
+{
+q:"निद्रा समस्या",
+stories:[
+"बिष्णु दाइ रातभर सोचिरहन्छन्।",
+"प्रिया दिदी बारम्बार ब्यूँझिन्छिन्।",
+"हरि भाइ ढिलो सुत्छन्।",
+"माया आमालाई धेरै निद्रा लाग्छ।",
+"लोकेन्द्र भाइ डराएर ब्यूँझिन्छन्।"
+]
+},
+{
+q:"थकान",
+stories:[
+"कमला दिदी बिहानै थाक्छिन्।",
+"टेक दाइलाई काम गर्न गाह्रो हुन्छ।",
+"अनिता दिदीलाई शरीर भारी लाग्छ।",
+"गोपाल दाइलाई शक्ति छैन।",
+"सरिता दिदी उठ्नै सक्दिनन्।"
+]
+},
+{
+q:"खानामा परिवर्तन",
+stories:[
+"सरिता दिदीलाई भोक लाग्दैन।",
+"दिपेश भाइ धेरै खान्छन्।",
+"माया आमाले खाना छोडेकी छन्।",
+"रमेश दाइलाई स्वाद छैन।",
+"कविता दिदी अनियमित खान्छिन्।"
+]
+}
+];
+
+let q=0;
+let s=0;
+let ans=[];
+let name="",date="";
+
+function start(){
+ name=document.getElementById("name").value;
+ date=document.getElementById("date").value;
+ if(!name||!date)return alert("fill");
+ document.getElementById("intro").style.display="none";
+ document.getElementById("app").style.display="block";
+ load();
+}
+
+function load(){
+ let Q=QUESTIONS[q];
+ document.getElementById("qTitle").innerText="प्रश्न "+(q+1)+": "+Q.q;
+ document.getElementById("storyBox").innerText=Q.stories[s];
+ document.getElementById("qText").innerText="पछिल्लो २ हप्तामा?";
+ let opt=["0","1","2","3"];
+ document.getElementById("options").innerHTML=opt.map(i=>
+ `<div class='option' onclick='select(${i})'>${i}</div>`
+).join("");
+}
+
+function nextStory(){
+ s=(s+1)%QUESTIONS[q].stories.length;
+ load();
+}
+
+function select(v){
+ ans[q]=parseInt(v);
+}
+
+function nextQ(){
+ q++;
+ s=0;
+ if(q>=QUESTIONS.length)return result();
+ load();
+}
+
+function prevQ(){
+ if(q>0)q--;
+ load();
+}
+
+function result(){
+ document.getElementById("app").style.display="none";
+ document.getElementById("result").style.display="block";
+ let total=ans.reduce((a,b)=>a+(b||0),0);
+ document.getElementById("score").innerText="Score: "+total+"/15";
+
+ let severity=
+ total<5?"Normal":
+ total<10?"Mild":
+ total<14?"Moderate":"Severe";
+
+ document.getElementById("severity").innerText=severity;
+}
+
+</script>
+
+</body>
+</html>
